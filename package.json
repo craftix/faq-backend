@@ -1,0 +1,35 @@
+{
+  "name": "faq-backend",
+  "version": "1.0.0",
+  "description": "Backend for the Craftix support FAQ",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Craftix/faq-backend.git"
+  },
+  "keywords": [
+    "support",
+    "faq",
+    "launcher",
+    "minecraft",
+    "craftix",
+    "electron"
+  ],
+  "author": "Adrien 'Litarvan' Navratil <adrien1975@live.fr>",
+  "license": "LGPL-3.0",
+  "bugs": {
+    "url": "https://github.com/Craftix/faq-backend/issues"
+  },
+  "homepage": "https://github.com/Craftix/faq-backend#readme",
+  "dependencies": {
+    "arangojs": "^6.10.0",
+    "btoa": "^1.2.1",
+    "esm": "^3.2.17",
+    "express": "^4.16.4",
+    "node-fetch": "^2.3.0",
+    "winston": "^3.2.1"
+  }
+}
