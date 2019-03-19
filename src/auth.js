@@ -1,17 +1,16 @@
 import fetch from 'node-fetch';
 import btoa from 'btoa';
+import jwt from 'jsonwebtoken';
 
 import { config } from './config';
 
-let token;
-
-function redirectURL() {
+function redirectURL(red) {
     const { host, port } = config;
-    return encodeURIComponent(`http://${host}` + (host === '127.0.0.1' ? `:${port}` : '') + '/auth/callback');
+    return encodeURIComponent(`http://${host}` + (host === '127.0.0.1' ? `:${port}` : '') + '/auth/callback?r=' + red);
 }
 
 export async function login(req, res) {
-    res.redirect(`https://discordapp.com/oauth2/authorize?client_id=${config.discord.id}&scope=identify&response_type=code&redirect_uri=${redirectURL()}`);
+    res.redirect(`https://discordapp.com/oauth2/authorize?client_id=${config.discord.id}&scope=identify&response_type=code&redirect_uri=${redirectURL(req.query.r)}`);
 }
 
 export async function callback(req, res) {
@@ -19,7 +18,7 @@ export async function callback(req, res) {
 
     const code = req.query.code;
     const creds = btoa(`${config.discord.id}:${config.discord.secret}`);
-    const response = await fetch(`https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirectURL()}`,
+    let response = await fetch(`https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirectURL(req.query.r)}`,
     {
         method: 'POST',
         headers: {
@@ -27,28 +26,66 @@ export async function callback(req, res) {
         },
     });
 
-    const json = await response.json();
+    let json = await response.json();
 
-    if (json.access_token) {
-        token = json.access_token;
-        res.redirect(`/auth/me`);
-    } else {
+    if (!json.access_token) {
         res.status(403).send('Failed auth');
-    }
-}
-
-export async function me(req, res) {
-    if (!token) {
-        res.status(403).send('Unauthorized');
         return;
     }
 
-    const response = await fetch('http://discordapp.com/api/users/@me', {
+    const accessToken = json.access_token
+
+    response = await fetch('http://discordapp.com/api/users/@me', {
         method: 'POST',
         headers: {
-            Authorization: `Bearer ${token}`
+            Authorization: `Bearer ${accessToken}`
         }
     });
 
+    json = await response.json();
+    const token = jwt.sign({
+        data: {
+            id: json.id,
+            name: json.username,
+            fullName: json.username + '#' + json.discriminator,
+            avatar: `https://cdn.discordapp.com/avatars/${json.id}/${json.avatar}.png?size=128`,
+            token: accessToken
+        }
+    }, config.jwtSecret, {
+        expiresIn: config.jwtExpiresIn
+    });
+
+    res.redirect(req.query.r + '?token=' + token);
+}
+
+export async function logout(req, res) {
+    const response = await fetch(`https://discordapp.com/api/oauth2/revoke?token=${req.token.data.token}`, {
+        method: 'POST'
+    });
+
     res.send(await response.json());
+}
+
+export async function validate(req, res, next) {
+    if (req.path === '/' || req.path === '/auth/login' || req.path === '/auth/callback') {
+        next();
+    }
+
+    const auth = req.headers.Authorization;
+
+    if (!auth || auth.length < 8) {
+        return res.status(301).send({
+            error: 'Unauthorized'
+        });
+    }
+
+    try {
+        req.token = jwt.verify(auth.substring(7), config.jwtSecret);
+    } catch (err) {
+        return res.status(301).send({
+            error: 'Unauthorized'
+        });
+    }
+
+    next();
 }

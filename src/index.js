@@ -2,7 +2,7 @@ import express from 'express';
 import logger from './logger';
 import { config, load as loadConfig } from './config';
 
-import { login, callback, me } from "./auth";
+import { login, callback, logout, validate } from "./auth";
 
 const version = require('../package.json').version;
 
@@ -15,9 +15,13 @@ loadConfig();
 
 logger.info('--> Loading HTTP app...');
 
+app.use(validate);
+
+app.get('/', (req, res) => res.contentType('text/plain').send(config.easter));
+
 app.get('/auth/login', login);
 app.get('/auth/callback', callback);
-app.get('/auth/me', me);
+app.post('/auth/logout', logout);
 
 const server = app.listen(config.port, config.host, () => {
     const { address, port } = server.address();

@@ -20,7 +20,9 @@ const defaultConfig = {
         password: '',
 
         database: 'faq'
-    }
+    },
+
+    easter: ''
 };
 
 const configFile = 'config.json';
