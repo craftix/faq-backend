@@ -1,8 +1,9 @@
 import express from 'express';
+
 import logger from './logger';
 import { config, load as loadConfig } from './config';
-
-import { login, callback, logout, validate } from "./auth";
+import { login, callback, logout, validate as authMiddleware } from './auth';
+import corsMiddleware from './cors';
 
 const version = require('../package.json').version;
 
@@ -15,7 +16,8 @@ loadConfig();
 
 logger.info('--> Loading HTTP app...');
 
-app.use(validate);
+app.use(corsMiddleware);
+app.use(authMiddleware);
 
 app.get('/', (req, res) => res.contentType('text/plain').send(config.easter));
 
